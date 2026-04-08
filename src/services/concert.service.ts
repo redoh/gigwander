@@ -1,4 +1,4 @@
-import { eq, gte, and, asc } from "drizzle-orm";
+import { eq, gte, and, asc, sql } from "drizzle-orm";
 import { db } from "../db";
 import { concerts, artists, venues } from "../db/schema";
 
@@ -61,6 +61,3 @@ export async function getUpcomingConcertsForArtists(artistIds: string[]) {
     )
     .orderBy(asc(concerts.date));
 }
-
-// Need to import sql for the array query
-import { sql } from "drizzle-orm";

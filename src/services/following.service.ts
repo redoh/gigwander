@@ -3,18 +3,19 @@ import { db } from "../db";
 import { following, artists } from "../db/schema";
 
 export async function followArtist(userId: string, artistId: string) {
+  const [created] = await db
+    .insert(following)
+    .values({ userId, artistId })
+    .onConflictDoNothing()
+    .returning();
+
+  if (created) return created;
+
   const [existing] = await db
     .select()
     .from(following)
     .where(and(eq(following.userId, userId), eq(following.artistId, artistId)));
-
-  if (existing) return existing;
-
-  const [created] = await db
-    .insert(following)
-    .values({ userId, artistId })
-    .returning();
-  return created;
+  return existing;
 }
 
 export async function unfollowArtist(userId: string, artistId: string) {

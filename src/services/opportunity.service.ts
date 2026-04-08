@@ -1,6 +1,6 @@
 import type { Opportunity } from "../types";
 import { getFollowedArtistIds } from "./following.service";
-import { getUpcomingConcertsForArtists, getUpcomingConcertsByArtist } from "./concert.service";
+import { getUpcomingConcertsForArtists } from "./concert.service";
 import { MockTransportProvider } from "../providers/transport/mock.provider";
 import { MockAccommodationProvider } from "../providers/accommodation/mock.provider";
 import { cityDistanceKm } from "../utils/distance";
@@ -31,15 +31,6 @@ export async function getOpportunitiesForArtist(
   currency = "EUR",
   limit = 10
 ): Promise<Opportunity[]> {
-  const concertRows = await getUpcomingConcertsByArtist(artistId);
-  const withArtist = concertRows.map((r) => ({
-    ...r,
-    artist: null as any, // will be filled below
-  }));
-
-  // We need artist info — fetch from first concert's join
-  // For artist-specific endpoint, we re-query with artist join
-  const { getUpcomingConcertsForArtists } = await import("./concert.service");
   const fullRows = await getUpcomingConcertsForArtists([artistId]);
   return rankOpportunities(fullRows, homeCity, sort, currency, limit);
 }
@@ -57,8 +48,18 @@ function rankOpportunities(
     const { concert, artist, venue } = row;
     const venueCity = venue.city;
 
-    const transports = transportProvider.search(homeCity, venueCity);
-    const accommodations = accommodationProvider.search(venueCity);
+    let transports: ReturnType<typeof transportProvider.search> = [];
+    let accommodations: ReturnType<typeof accommodationProvider.search> = [];
+    try {
+      transports = transportProvider.search(homeCity, venueCity);
+    } catch (error) {
+      console.error(`Transport search failed for ${homeCity} → ${venueCity}:`, error);
+    }
+    try {
+      accommodations = accommodationProvider.search(venueCity);
+    } catch (error) {
+      console.error(`Accommodation search failed for ${venueCity}:`, error);
+    }
 
     const cheapestTransport = transports[0] ?? null;
     const cheapestAccommodation = accommodations[0] ?? null;

@@ -16,7 +16,14 @@ export function getAIProvider(): AIProvider {
 
 export async function generateExplanation(params: Parameters<AIProvider["generateTripExplanation"]>[0]): Promise<{ text: string; model: string }> {
   const ai = getAIProvider();
-  const text = await ai.generateTripExplanation(params);
-  const model = env.OPENAI_API_KEY ? "gpt-4o-mini" : "mock";
-  return { text, model };
+  const model = ai.model ?? "unknown";
+  try {
+    const text = await ai.generateTripExplanation(params);
+    return { text, model };
+  } catch (error) {
+    console.error("AI provider failed, falling back to mock:", error);
+    const fallback = new MockAIProvider();
+    const text = await fallback.generateTripExplanation(params);
+    return { text, model: fallback.model ?? "mock" };
+  }
 }

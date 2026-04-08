@@ -1,21 +1,17 @@
-import { eq, ilike, or, sql } from "drizzle-orm";
+import { eq, ilike, or, sql, and } from "drizzle-orm";
 import { db } from "../db";
 import { artists } from "../db/schema";
 
 export async function listArtists(query?: string, genre?: string) {
+  const conditions = [];
   if (query) {
-    return db
-      .select()
-      .from(artists)
-      .where(or(ilike(artists.name, `%${query}%`), ilike(artists.bio, `%${query}%`)));
+    conditions.push(or(ilike(artists.name, `%${query}%`), ilike(artists.bio, `%${query}%`)));
   }
   if (genre) {
-    return db
-      .select()
-      .from(artists)
-      .where(sql`${artists.genres} @> ARRAY[${genre}]::text[]`);
+    conditions.push(sql`${artists.genres} @> ARRAY[${genre}]::text[]`);
   }
-  return db.select().from(artists);
+  if (conditions.length === 0) return db.select().from(artists);
+  return db.select().from(artists).where(and(...conditions));
 }
 
 export async function getArtistById(id: string) {
